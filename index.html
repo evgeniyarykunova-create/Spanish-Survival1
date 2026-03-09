@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Vivir en España! - Quest</title>
+    <style>
+        :root {
+            --primary: #ffcc00; /* Цвет испанского флага */
+            --secondary: #aa151b;
+            --glass: rgba(255, 255, 255, 0.9);
+        }
+
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+
+        /* Контейнер игры */
+        #game-viewport {
+            width: 100%; height: 100vh;
+            background-size: cover; background-position: center;
+            transition: background-image 0.8s ease-in-out;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        /* Экран карты */
+        #map-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8) url('https://images.unsplash.com/photo-1528659556537-8856064f777e?q=80&w=2000') center/cover;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+
+        .location-marker {
+            background: var(--primary); color: black; padding: 15px 25px;
+            border-radius: 30px; border: 3px solid var(--secondary);
+            cursor: pointer; font-weight: bold; animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
+
+        /* Интерфейс задания */
+        .quest-card {
+            background: var(--glass); width: 85%; max-width: 500px;
+            padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center; border-top: 5px solid var(--secondary);
+        }
+
+        .task-image { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; margin: 15px 0; }
+
+        .btn {
+            display: block; width: 100%; padding: 12px; margin: 8px 0;
+            border: 2px solid #ddd; border-radius: 8px; background: white;
+            cursor: pointer; transition: 0.2s; font-size: 16px;
+        }
+        .btn:hover { background: #f0f0f0; border-color: var(--secondary); }
+
+        input[type="text"] {
+            width: 90%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc;
+        }
+
+        /* Прогресс-бар */
+        .progress-container {
+            position: fixed; bottom: 20px; width: 80%; height: 15px;
+            background: rgba(255,255,255,0.3); border-radius: 10px; overflow: hidden;
+        }
+        #progress-fill { height: 100%; width: 0%; background: var(--primary); transition: 0.5s; }
+    </style>
+</head>
+<body>
+
+<div id="game-viewport">
+    <div id="map-overlay">
+        <h1 style="color: white;">Tu viaje por España</h1>
+        <div id="next-location-btn" class="location-marker">Ir a la siguiente misión</div>
+    </div>
+
+    <div class="quest-card" id="quest-box">
+        <h2 id="loc-name" style="margin-top:0; color: var(--secondary);">Cargando...</h2>
+        <p id="task-text"></p>
+        <img id="task-visual" class="task-image" style="display:none;">
+        <div id="answers-grid"></div>
+        <div id="feedback" style="margin-top: 15px; font-weight: bold;"></div>
+    </div>
+
+    <div class="progress-container">
+        <div id="progress-fill"></div>
+    </div>
+</div>
+
+<script>
+// --- КОНФИГУРАЦИЯ (Редактор будет менять этот объект) ---
+const gameData = {
+    locations: [
+        {
+            id: 1,
+            name: "Supermercado Mercadona",
+            bg: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1200",
+            tasks: [
+                {
+                    type: "quiz",
+                    question: "¿Cómo pides una bolsa?",
+                    options: ["¿Me das una bolsa?", "¿Tienes un zapato?", "¿Cuánto es?"],
+                    correct: 0,
+                    img: "https://images.unsplash.com/photo-1605600611280-1aef21275958?q=80&w=400"
+                }
+            ]
+        },
+        {
+            id: 2,
+            name: "Farmacia local",
+            bg: "https://images.unsplash.com/photo-1587854692152-cbe660dbbb88?q=80&w=1200",
+            tasks: [
+                {
+                    type: "input",
+                    question: "Escribe 'Мне нужна помощь' (исп.):",
+                    correct: "necesito ayuda",
+                    img: "https://images.unsplash.com/photo-1586015555751-63bb77f4322a?q=80&w=400"
+                }
+            ]
+        }
+    ]
+};
+
+// --- ДВИЖОК ИГРЫ ---
+let currentLocIdx = 0;
+let currentTaskIdx = 0;
+
+function init() {
+    showLocation();
+}
+
+function showLocation() {
+    const loc = gameData.locations[currentLocIdx];
+    const task = loc.tasks[currentTaskIdx];
+    
+    document.getElementById('map-overlay').style.display = 'none';
+    document.getElementById('game-viewport').style.backgroundImage = `url(${loc.bg})`;
+    document.getElementById('loc-name').innerText = loc.name;
+    document.getElementById('task-text').innerText = task.question;
+    
+    const imgEl = document.getElementById('task-visual');
+    if(task.img) { imgEl.src = task.img; imgEl.style.display = 'block'; }
+    else { imgEl.style.display = 'none'; }
+
+    renderAnswers(task);
+    updateProgress();
+}
+
+function renderAnswers(task) {
+    const container = document.getElementById('answers-grid');
+    container.innerHTML = '';
+    document.getElementById('feedback').innerText = '';
+
+    if(task.type === 'quiz') {
+        task.options.forEach((opt, i) => {
+            const b = document.createElement('button');
+            b.className = 'btn';
+            b.innerText = opt;
+            b.onclick = () => check(i === task.correct);
+            container.appendChild(b);
+        });
+    } else if(task.type === 'input') {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.placeholder = 'Escribe aquí...';
+        const b = document.createElement('button');
+        b.className = 'btn';
+        b.innerText = 'Enviar';
+        b.onclick = () => check(inp.value.toLowerCase().trim() === task.correct);
+        container.appendChild(inp);
+        container.appendChild(b);
+    }
+}
+
+function check(isCorrect) {
+    const fb = document.getElementById('feedback');
+    if(isCorrect) {
+        fb.style.color = 'green';
+        fb.innerText = "¡Correcto! +10 puntos";
+        setTimeout(nextStep, 1500);
+    } else {
+        fb.style.color = 'red';
+        fb.innerText = "Inténtalo de nuevo";
+    }
+}
+
+function nextStep() {
+    currentTaskIdx++;
+    const loc = gameData.locations[currentLocIdx];
+    
+    if(currentTaskIdx >= loc.tasks.length) {
+        // Локация пройдена -> на карту
+        currentLocIdx++;
+        currentTaskIdx = 0;
+        if(currentLocIdx < gameData.locations.length) {
+            showMap();
+        } else {
+            alert("🎉 ¡Felicidades! Has completado el viaje.");
+        }
+    } else {
+        showLocation();
+    }
+}
+
+function showMap() {
+    document.getElementById('map-overlay').style.display = 'flex';
+    document.getElementById('next-location-btn').onclick = showLocation;
+}
+
+function updateProgress() {
+    const total = gameData.locations.length;
+    const current = currentLocIdx;
+    document.getElementById('progress-fill').style.width = (current / total * 100) + '%';
+}
+
+init();
+</script>
+</body>
+</html>
