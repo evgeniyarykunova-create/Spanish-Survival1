@@ -2,66 +2,72 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Quest España</title>
+    <title>Misión: España</title>
     <style>
         :root { --spain-red: #aa151b; --spain-gold: #ffcc00; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
 
-        /* Контейнер игры с фоном локации */
-        #game-screen {
-            width: 100%; height: 100vh;
-            background-size: cover; background-position: center;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: 1s ease-in-out; /* Плавная смена фона */
-        }
-
-        /* Экран КАРТЫ (перекрывает всё) */
+        /* ЭКРАН КАРТЫ (Стартовый и промежуточный) */
         #map-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #2c3e50 url('https://images.unsplash.com/photo-1528659556537-8856064f777e?q=80&w=2000') center/cover;
-            display: none; /* По умолчанию скрыт */
-            flex-direction: column; align-items: center; justify-content: center;
-            z-index: 999;
-            color: white; text-align: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 999; color: white;
+        }
+
+        .map-container {
+            position: relative; width: 80%; height: 60%;
+            background: rgba(255,255,255,0.1); border-radius: 20px;
+            display: flex; justify-content: space-around; align-items: center; gap: 20px;
+        }
+
+        .location-pin {
+            background: white; color: black; padding: 15px; border-radius: 15px;
+            cursor: pointer; transition: 0.3s; border: 3px solid var(--spain-gold);
+            text-align: center; width: 120px; position: relative;
+        }
+        .location-pin.locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        .location-pin:not(.locked):hover { transform: scale(1.1); background: var(--spain-gold); }
+        .pin-icon { font-size: 30px; display: block; }
+
+        /* ЭКРАН ИГРЫ (ЛОКАЦИЯ) */
+        #game-screen {
+            width: 100%; height: 100vh;
+            background-size: cover; background-position: center;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            transition: 1s ease-in-out;
         }
 
         .quest-card {
             background: rgba(255, 255, 255, 0.95);
-            padding: 30px; border-radius: 20px; width: 80%; max-width: 450px;
+            padding: 30px; border-radius: 20px; width: 85%; max-width: 450px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4); text-align: center;
         }
-
-        .btn-next-mission {
-            background: var(--spain-gold); color: black; padding: 20px 40px;
-            font-size: 20px; font-weight: bold; border: 4px solid var(--spain-red);
-            border-radius: 50px; cursor: pointer; animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
 
         .option-btn {
             display: block; width: 100%; padding: 15px; margin: 10px 0;
             border: 2px solid #ddd; border-radius: 10px; cursor: pointer; font-size: 16px;
         }
         .option-btn:hover { background: #f8f8f8; border-color: var(--spain-red); }
-        
+
         #progress-bar { position: fixed; bottom: 0; left: 0; height: 10px; background: var(--spain-gold); width: 0%; transition: 0.5s; }
+        .badge { background: #4caf50; color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; margin-top: 5px; display: inline-block; }
     </style>
 </head>
 <body>
 
 <div id="map-screen">
-    <h1 style="text-shadow: 2px 2px 10px black;">¡Misión Completada!</h1>
-    <p style="font-size: 1.2em; text-shadow: 2px 2px 5px black;">Te mueves por el mapa de España...</p>
-    <div style="margin: 40px 0;">
-        <span style="font-size: 80px;">📍</span>
-    </div>
-    <button class="btn-next-mission" onclick="startNextLocation()">IR A LA SIGUIENTE PARADA</button>
+    <h1 style="text-shadow: 2px 2px 10px black; margin-bottom: 5px;">📍 Selecciona tu destino</h1>
+    <p style="margin-bottom: 30px; text-shadow: 1px 1px 5px black;">Completa las misiones para avanzar</p>
+    
+    <div class="map-container" id="map-pins">
+        </div>
 </div>
 
 <div id="game-screen">
     <div class="quest-card">
-        <h2 id="loc-title" style="color: var(--spain-red);"></h2>
+        <button onclick="backToMap()" style="float: left; cursor: pointer; border: none; background: none;">⬅ Карта</button>
+        <h2 id="loc-title" style="color: var(--spain-red); clear: both;"></h2>
         <p id="question-text" style="font-size: 18px;"></p>
         <div id="options-box"></div>
         <p id="feedback" style="margin-top: 20px; font-weight: bold;"></p>
@@ -72,44 +78,72 @@
 <script>
 const gameData = [
     {
-        name: "Supermercado (Madrid)",
-        background: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1200", // Фото полок магазина
-        questions: [
-            { q: "¿Cómo pides la cuenta?", options: ["La cuenta, por favor", "Hola, ¿qué tal?", "Soy un tomate"], correct: 0 }
-        ]
+        id: 0,
+        name: "Supermercado",
+        icon: "🛒",
+        background: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1200",
+        questions: [{ q: "¿Cómo pides una bolsa?", options: ["¿Me das una bolsa?", "Hola, ¿qué tal?", "Soy un tomate"], correct: 0 }],
+        completed: false
     },
     {
-        name: "Farmacia (Barcelona)",
-        background: "https://images.unsplash.com/photo-1631549916768-4119b295f78b?q=80&w=1200", // Фото аптеки
-        questions: [
-            { q: "Tienes tos. ¿Qué pides?", options: ["Jarabe para la tos", "Un kilo de manzanas", "Una entrada de cine"], correct: 0 }
-        ]
+        id: 1,
+        name: "Farmacia",
+        icon: "💊",
+        background: "https://images.unsplash.com/photo-1631549916768-4119b295f78b?q=80&w=1200",
+        questions: [{ q: "Tienes tos. ¿Qué pides?", options: ["Jarabe para la tos", "Un kilo de manzanas", "Una entrada"], correct: 0 }],
+        completed: false
     },
     {
-        name: "Ayuntamiento (Valencia)",
-        background: "https://images.unsplash.com/photo-1512411925324-406b29d4990d?q=80&w=1200", // Фото мэрии/офиса
-        questions: [
-            { q: "¿Dónde está el padrón?", options: ["En la oficina", "En el parque", "En el café"], correct: 0 }
-        ]
+        id: 2,
+        name: "Ayuntamiento",
+        icon: "🏢",
+        background: "https://images.unsplash.com/photo-1512411925324-406b29d4990d?q=80&w=1200",
+        questions: [{ q: "¿Dónde está el padrón?", options: ["En la oficina", "En el parque", "En el café"], correct: 0 }],
+        completed: false
     }
 ];
 
-let currentLocIdx = 0;
+let activeLocIdx = null;
 
-function loadLocation() {
-    // Скрываем карту
+// Инициализация карты
+function renderMap() {
+    document.getElementById('map-screen').style.display = 'flex';
+    document.getElementById('game-screen').style.display = 'none';
+    
+    const container = document.getElementById('map-pins');
+    container.innerHTML = '';
+
+    gameData.forEach((loc, index) => {
+        const pin = document.createElement('div');
+        // Локация открыта, если она первая или предыдущая выполнена
+        const isLocked = index > 0 && !gameData[index - 1].completed;
+        
+        pin.className = `location-pin ${isLocked ? 'locked' : ''}`;
+        pin.innerHTML = `
+            <span class="pin-icon">${loc.icon}</span>
+            <strong>${loc.name}</strong>
+            ${loc.completed ? '<div class="badge">Completado ✅</div>' : ''}
+        `;
+        
+        if (!isLocked) {
+            pin.onclick = () => startLocation(index);
+        }
+        container.appendChild(pin);
+    });
+}
+
+function startLocation(idx) {
+    activeLocIdx = idx;
+    const loc = gameData[idx];
+    
     document.getElementById('map-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'flex';
     
-    const loc = gameData[currentLocIdx];
-    
-    // 1. МЕНЯЕМ ФОН (Background-image)
+    // МЕНЯЕМ ФОН
     document.getElementById('game-screen').style.backgroundImage = `url('${loc.background}')`;
-    
-    // 2. ОБНОВЛЯЕМ ТЕКСТЫ
     document.getElementById('loc-title').innerText = loc.name;
     document.getElementById('question-text').innerText = loc.questions[0].q;
     
-    // 3. ОБНОВЛЯЕМ КНОПКИ
     const box = document.getElementById('options-box');
     box.innerHTML = '';
     loc.questions[0].options.forEach((opt, i) => {
@@ -119,48 +153,35 @@ function loadLocation() {
         btn.onclick = () => checkAnswer(i === loc.questions[0].correct);
         box.appendChild(btn);
     });
-
     document.getElementById('feedback').innerText = "";
-    updateProgress();
 }
 
 function checkAnswer(isCorrect) {
     const fb = document.getElementById('feedback');
     if(isCorrect) {
-        fb.innerHTML = "✅ ¡Excelente!<br>Te has ganado el respeto de los locales.";
+        fb.innerHTML = "✅ ¡Correcto!";
         fb.style.color = "green";
-        
-        // Через 1.5 секунды "выбрасываем" на карту
-        setTimeout(showMapTransition, 1500);
+        gameData[activeLocIdx].completed = true;
+        updateOverallProgress();
+        setTimeout(renderMap, 1500); // Возврат на карту через 1.5 сек
     } else {
-        fb.innerText = "❌ Inténtalo de nuevo, ¡tú puedes!";
+        fb.innerText = "❌ Inténtalo de nuevo";
         fb.style.color = "red";
     }
 }
 
-function showMapTransition() {
-    currentLocIdx++;
-    if(currentLocIdx < gameData.length) {
-        // ПОКАЗЫВАЕМ ЭКРАН КАРТЫ
-        document.getElementById('map-screen').style.display = 'flex';
-    } else {
-        alert("🎉 ¡FELICIDADES! Tienes tu residencia en España.");
-        currentLocIdx = 0; // Начать заново
-        loadLocation();
-    }
+function backToMap() {
+    renderMap();
 }
 
-function startNextLocation() {
-    loadLocation();
+function updateOverallProgress() {
+    const total = gameData.length;
+    const done = gameData.filter(l => l.completed).length;
+    document.getElementById('progress-bar').style.width = (done / total * 100) + '%';
 }
 
-function updateProgress() {
-    const percent = (currentLocIdx / gameData.length) * 100;
-    document.getElementById('progress-bar').style.width = percent + '%';
-}
-
-// Запуск первой локации
-loadLocation();
+// Запуск
+renderMap();
 </script>
 </body>
 </html>
