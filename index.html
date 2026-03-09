@@ -2,72 +2,85 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Misión España: Pro Edition</title>
+    <title>¡Vivir en España! - Libertad Total</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <style>
         :root { --spain-red: #aa151b; --spain-gold: #ffcc00; --success: #4caf50; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Montserrat', sans-serif; overflow: hidden; }
 
-        /* ЭКРАН КАРТЫ */
+        /* ВЕРХНЯЯ ПАНЕЛЬ НА КАРТЕ */
+        #top-hud {
+            position: fixed; top: 0; left: 0; width: 100%; padding: 15px;
+            background: rgba(0,0,0,0.7); color: white; display: flex;
+            justify-content: space-around; align-items: center; z-index: 1100;
+        }
+
         #map-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #2c3e50 url('https://images.unsplash.com/photo-1528659556537-8856064f777e?q=80&w=2000') center/cover;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 1000; color: white;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
         }
 
-        /* ЭКРАН ЛОКАЦИИ (Dashboard с подзаданиями) */
+        .map-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 20px; }
+
+        .location-pin {
+            background: white; color: black; padding: 20px; border-radius: 20px;
+            cursor: pointer; transition: 0.3s; border: 4px solid var(--spain-gold);
+            text-align: center; width: 130px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        .location-pin:hover { transform: translateY(-10px); border-color: var(--spain-red); }
+        .location-pin.done { border-color: var(--success); background: #eaffea; }
+
+        /* ПЕРСОНАЖ */
+        .character-img {
+            position: absolute; bottom: -50px; right: -60px;
+            width: 150px; height: auto; z-index: 10;
+        }
+
         #game-screen {
-            width: 100%; height: 100vh;
-            background-size: cover; background-position: center;
+            width: 100%; height: 100vh; background-size: cover; background-position: center;
             display: none; flex-direction: column; align-items: center; justify-content: center;
         }
 
         .quest-card {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 25px; border-radius: 20px; width: 85%; max-width: 500px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4); text-align: center;
-            position: relative;
+            background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 25px;
+            width: 85%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            text-align: center; position: relative;
         }
 
-        /* Стили для выбора подзаданий */
-        .subtask-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        .subtask-item {
-            padding: 15px; border: 2px solid #eee; border-radius: 12px;
-            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-            background: white; transition: 0.3s;
-        }
-        .subtask-item:hover { border-color: var(--spain-gold); background: #fffdf5; }
-        .subtask-item.done { border-color: var(--success); background: #f0fff0; cursor: default; }
-
-        /* Стили для кнопок и инпутов */
         .option-btn {
-            display: block; width: 100%; padding: 12px; margin: 8px 0;
-            border: 2px solid #ddd; border-radius: 10px; cursor: pointer;
+            display: block; width: 100%; padding: 15px; margin: 10px 0;
+            border: 2px solid #ddd; border-radius: 12px; cursor: pointer; font-size: 16px; transition: 0.2s;
         }
-        .option-btn:hover { border-color: var(--spain-red); background: #fdfdfd; }
-        
-        .img-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .img-option { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; cursor: pointer; border: 3px solid transparent; }
-        .img-option:hover { border-color: var(--spain-gold); }
+        .option-btn:hover { background: #f0f0f0; border-color: var(--spain-red); }
 
+        .progress-bar-bg { width: 200px; height: 15px; background: #444; border-radius: 10px; overflow: hidden; }
+        #progress-fill { height: 100%; width: 0%; background: var(--spain-gold); transition: 0.5s; }
+        
         .hidden { display: none !important; }
-        #progress-bar { position: fixed; bottom: 0; left: 0; height: 8px; background: var(--spain-gold); width: 0%; transition: 0.5s; }
     </style>
 </head>
 <body>
 
+<div id="top-hud">
+    <div>Puntos: <span id="score-val">0</span> 🏆</div>
+    <div style="display:flex; align-items:center; gap:10px;">
+        Progreso: 
+        <div class="progress-bar-bg"><div id="progress-fill"></div></div>
+    </div>
+</div>
+
 <div id="map-screen">
-    <h1 style="text-shadow: 2px 2px 10px black;">📍 Tu Mapa de Misiones</h1>
-    <div id="map-pins" style="display: flex; gap: 20px;"></div>
+    <h1 style="color:white; text-shadow: 2px 2px 10px black;">¿A dónde quieres ir hoy?</h1>
+    <div id="map-pins" class="map-container"></div>
 </div>
 
 <div id="game-screen">
     <div id="location-hub" class="quest-card">
-        <button onclick="renderMap()" style="position: absolute; left: 20px; top: 20px; border: none; background: none; cursor: pointer;">⬅ Карта</button>
-        <h2 id="hub-title" style="color: var(--spain-red); margin-top: 30px;"></h2>
-        <p>Completa todas las tareas para avanzar:</p>
-        <div id="subtask-container" class="subtask-list"></div>
-        <button id="finish-loc-btn" class="option-btn hidden" onclick="renderMap()" style="background: var(--success); color: white; font-weight: bold; margin-top: 20px;">✅ ¡MISIÓN COMPLETADA! VOLVER AL MAPA</button>
+        <button onclick="renderMap()" style="float:left; cursor:pointer; border:none; background:none; font-size:20px;">⬅</button>
+        <h2 id="hub-title" style="color: var(--spain-red);"></h2>
+        <div id="subtask-container"></div>
+        <img id="char-avatar" class="character-img" src="https://cdn-icons-png.flaticon.com/512/1999/1999155.png" alt="Guía">
     </div>
 
     <div id="task-window" class="quest-card hidden">
@@ -76,149 +89,142 @@
         <div id="task-content"></div>
         <p id="task-feedback" style="font-weight: bold; margin-top: 15px;"></p>
     </div>
-
-    <div id="progress-bar"></div>
 </div>
 
 <script>
-const gameData = [
-    {
-        name: "Supermercado",
-        background: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1200",
-        icon: "🛒",
-        completed: false,
-        subtasks: [
-            { id: 0, title: "La Fruta", desc: "Encuentra el pepino:", type: "image", 
-              options: [
-                  {img: "https://images.unsplash.com/photo-1449333254703-78717b744070?w=200", correct: true},
-                  {img: "https://images.unsplash.com/photo-1596333522248-101637328df7?w=200", correct: false}
-              ], done: false },
-            { id: 1, title: "El Pago", desc: "¿Cómo pides la cuenta?", type: "quiz", 
-              options: ["La cuenta, por favor", "Tengo un perro", "Adiós"], correct: 0, done: false },
-            { id: 2, title: "Ayuda", desc: "Escribe 'Где молоко?' (¿Dónde está la leche?):", type: "input", 
-              correct: "¿dónde está la leche?", done: false }
-        ]
+// Эти данные будут редактироваться в Редакторе
+const gameData = {
+    settings: {
+        charImage: "https://cdn-icons-png.flaticon.com/512/1999/1999155.png", // Твой персонаж
+        totalScore: 0
     },
-    {
-        name: "Farmacia",
-        background: "https://images.unsplash.com/photo-1631549916768-4119b295f78b?q=80&w=1200",
-        icon: "💊",
-        completed: false,
-        subtasks: [
-            { id: 0, title: "Síntomas", desc: "Dile que te duele la cabeza:", type: "quiz", 
-              options: ["Me duele la cabeza", "Me gusta el sol"], correct: 0, done: false }
-        ]
-    }
-];
+    locations: [
+        {
+            name: "Supermercado", icon: "🛒", completed: false,
+            background: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1200",
+            subtasks: [
+                { id: 0, title: "Comprar pan", desc: "¿Cómo pides pan?", type: "quiz", options: ["Un pan, por favor", "Hola"], correct: 0, done: false }
+            ]
+        },
+        {
+            name: "Ayuntamiento", icon: "🏢", completed: false,
+            background: "https://images.unsplash.com/photo-1512411925324-406b29d4990d?q=80&w=1200",
+            subtasks: [
+                { id: 0, title: "El Padrón", desc: "Escribe 'Cita previa':", type: "input", correct: "cita previa", done: false }
+            ]
+        },
+        {
+            name: "Farmacia", icon: "💊", completed: false,
+            background: "https://images.unsplash.com/photo-1587854692152-cbe660dbbb88?q=80&w=1200",
+            subtasks: [
+                { id: 0, title: "Medicina", desc: "Encuentra la aspirina", type: "quiz", options: ["Aspirina", "Caramelo"], correct: 0, done: false }
+            ]
+        }
+    ]
+};
 
-let currentLoc = null;
-let currentSubtask = null;
+let activeLoc = null;
 
 function renderMap() {
-    document.getElementById('map-screen').classList.remove('hidden');
+    document.getElementById('map-screen').style.display = 'flex';
     document.getElementById('game-screen').style.display = 'none';
     const container = document.getElementById('map-pins');
     container.innerHTML = '';
 
-    gameData.forEach((loc, i) => {
-        const isLocked = i > 0 && !gameData[i-1].completed;
+    gameData.locations.forEach((loc, i) => {
         const div = document.createElement('div');
-        div.style.cssText = `background:white; color:black; padding:20px; border-radius:15px; cursor:pointer; text-align:center; min-width:100px; border: 4px solid ${loc.completed ? 'var(--success)' : 'var(--spain-gold)'}; ${isLocked ? 'opacity:0.5; filter:grayscale(1); cursor:not-allowed;' : ''}`;
-        div.innerHTML = `<span style="font-size:40px">${loc.icon}</span><br><b>${loc.name}</b>`;
-        if(!isLocked) div.onclick = () => enterLocation(i);
+        div.className = `location-pin ${loc.completed ? 'done' : ''}`;
+        div.innerHTML = `<span style="font-size:40px">${loc.icon}</span><br><b>${loc.name}</b><br>
+                         <small>${loc.completed ? '✅ Hecho' : 'Зайти'}</small>`;
+        div.onclick = () => enterLocation(i);
         container.appendChild(div);
     });
+    updateHUD();
 }
 
 function enterLocation(idx) {
-    currentLoc = gameData[idx];
-    document.getElementById('map-screen').classList.add('hidden');
+    activeLoc = gameData.locations[idx];
+    document.getElementById('map-screen').style.display = 'none';
     document.getElementById('game-screen').style.display = 'flex';
-    document.getElementById('game-screen').style.backgroundImage = `url(${currentLoc.background})`;
+    document.getElementById('game-screen').style.backgroundImage = `url(${activeLoc.background})`;
+    document.getElementById('char-avatar').src = gameData.settings.charImage;
     renderHub();
 }
 
 function renderHub() {
     document.getElementById('location-hub').classList.remove('hidden');
     document.getElementById('task-window').classList.add('hidden');
-    document.getElementById('hub-title').innerText = currentLoc.name;
+    document.getElementById('hub-title').innerText = activeLoc.name;
     
     const container = document.getElementById('subtask-container');
     container.innerHTML = '';
     
-    let allDone = true;
-    currentLoc.subtasks.forEach(st => {
-        const item = document.createElement('div');
-        item.className = `subtask-item ${st.done ? 'done' : ''}`;
-        item.innerHTML = `<span>${st.title}</span> <span>${st.done ? '✅' : '⏳'}</span>`;
-        if(!st.done) {
-            item.onclick = () => startSubtask(st);
-            allDone = false;
-        }
-        container.appendChild(item);
+    activeLoc.subtasks.forEach(st => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = `${st.title} ${st.done ? '✅' : '➡️'}`;
+        if(!st.done) btn.onclick = () => startTask(st);
+        else btn.style.opacity = "0.6";
+        container.appendChild(btn);
     });
 
-    if(allDone) {
-        currentLoc.completed = true;
-        document.getElementById('finish-loc-btn').classList.remove('hidden');
-    } else {
-        document.getElementById('finish-loc-btn').classList.add('hidden');
+    // Проверка: выполнены ли все подзадания в этой локации
+    const allDone = activeLoc.subtasks.every(s => s.done);
+    if(allDone && !activeLoc.completed) {
+        activeLoc.completed = true;
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); // САЛЮТ!
     }
 }
 
-function startSubtask(st) {
-    currentSubtask = st;
+function startTask(st) {
     document.getElementById('location-hub').classList.add('hidden');
     document.getElementById('task-window').classList.remove('hidden');
     document.getElementById('task-title').innerText = st.title;
     document.getElementById('task-desc').innerText = st.desc;
-    document.getElementById('task-feedback').innerText = '';
     
     const content = document.getElementById('task-content');
     content.innerHTML = '';
 
     if(st.type === 'quiz') {
         st.options.forEach((opt, i) => {
-            const btn = document.createElement('button');
-            btn.className = 'option-btn';
-            btn.innerText = opt;
-            btn.onclick = () => checkSub(i === st.correct);
-            content.appendChild(btn);
+            const b = document.createElement('button');
+            b.className = 'option-btn';
+            b.innerText = opt;
+            b.onclick = () => {
+                if(i === st.correct) {
+                    st.done = true;
+                    gameData.settings.totalScore += 10;
+                    renderHub();
+                } else {
+                    document.getElementById('task-feedback').innerText = "Try again!";
+                }
+            };
+            content.appendChild(b);
         });
-    } else if(st.type === 'image') {
-        const grid = document.createElement('div');
-        grid.className = 'img-grid';
-        st.options.forEach(opt => {
-            const img = document.createElement('img');
-            img.src = opt.img;
-            img.className = 'img-option';
-            img.onclick = () => checkSub(opt.correct);
-            grid.appendChild(img);
-        });
-        content.appendChild(grid);
     } else if(st.type === 'input') {
         const inp = document.createElement('input');
-        inp.type = 'text';
-        inp.style.width = '80%';
-        inp.style.padding = '10px';
-        const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.innerText = 'Verificar';
-        btn.onclick = () => checkSub(inp.value.toLowerCase().trim() === st.correct);
+        inp.className = 'option-btn'; // используем тот же стиль
+        inp.placeholder = "Escribe aquí...";
+        const b = document.createElement('button');
+        b.className = 'option-btn';
+        b.innerText = "Check";
+        b.onclick = () => {
+            if(inp.value.toLowerCase().trim() === st.correct) {
+                st.done = true;
+                gameData.settings.totalScore += 15;
+                renderHub();
+            }
+        };
         content.appendChild(inp);
-        content.appendChild(btn);
+        content.appendChild(b);
     }
 }
 
-function checkSub(isCorrect) {
-    const fb = document.getElementById('task-feedback');
-    if(isCorrect) {
-        fb.innerText = "¡Muy bien! ✅"; fb.style.color = "green";
-        currentSubtask.done = true;
-        setTimeout(renderHub, 1200);
-    } else {
-        fb.innerText = "Sigue intentando... ❌"; fb.style.color = "red";
-    }
+function updateHUD() {
+    document.getElementById('score-val').innerText = gameData.settings.totalScore;
+    const total = gameData.locations.length;
+    const done = gameData.locations.filter(l => l.completed).length;
+    document.getElementById('progress-fill').style.width = (done / total * 100) + '%';
 }
 
 renderMap();
