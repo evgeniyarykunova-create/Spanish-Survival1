@@ -2,217 +2,165 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Vivir en España! - Quest</title>
+    <title>Quest España</title>
     <style>
-        :root {
-            --primary: #ffcc00; /* Цвет испанского флага */
-            --secondary: #aa151b;
-            --glass: rgba(255, 255, 255, 0.9);
-        }
+        :root { --spain-red: #aa151b; --spain-gold: #ffcc00; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
 
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
-
-        /* Контейнер игры */
-        #game-viewport {
+        /* Контейнер игры с фоном локации */
+        #game-screen {
             width: 100%; height: 100vh;
             background-size: cover; background-position: center;
-            transition: background-image 0.8s ease-in-out;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 1s ease-in-out; /* Плавная смена фона */
         }
 
-        /* Экран карты */
-        #map-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8) url('https://images.unsplash.com/photo-1528659556537-8856064f777e?q=80&w=2000') center/cover;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 100;
+        /* Экран КАРТЫ (перекрывает всё) */
+        #map-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #2c3e50 url('https://images.unsplash.com/photo-1528659556537-8856064f777e?q=80&w=2000') center/cover;
+            display: none; /* По умолчанию скрыт */
+            flex-direction: column; align-items: center; justify-content: center;
+            z-index: 999;
+            color: white; text-align: center;
         }
 
-        .location-marker {
-            background: var(--primary); color: black; padding: 15px 25px;
-            border-radius: 30px; border: 3px solid var(--secondary);
-            cursor: pointer; font-weight: bold; animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
-
-        /* Интерфейс задания */
         .quest-card {
-            background: var(--glass); width: 85%; max-width: 500px;
-            padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            text-align: center; border-top: 5px solid var(--secondary);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px; border-radius: 20px; width: 80%; max-width: 450px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4); text-align: center;
         }
 
-        .task-image { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; margin: 15px 0; }
-
-        .btn {
-            display: block; width: 100%; padding: 12px; margin: 8px 0;
-            border: 2px solid #ddd; border-radius: 8px; background: white;
-            cursor: pointer; transition: 0.2s; font-size: 16px;
-        }
-        .btn:hover { background: #f0f0f0; border-color: var(--secondary); }
-
-        input[type="text"] {
-            width: 90%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc;
+        .btn-next-mission {
+            background: var(--spain-gold); color: black; padding: 20px 40px;
+            font-size: 20px; font-weight: bold; border: 4px solid var(--spain-red);
+            border-radius: 50px; cursor: pointer; animation: pulse 2s infinite;
         }
 
-        /* Прогресс-бар */
-        .progress-container {
-            position: fixed; bottom: 20px; width: 80%; height: 15px;
-            background: rgba(255,255,255,0.3); border-radius: 10px; overflow: hidden;
+        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
+
+        .option-btn {
+            display: block; width: 100%; padding: 15px; margin: 10px 0;
+            border: 2px solid #ddd; border-radius: 10px; cursor: pointer; font-size: 16px;
         }
-        #progress-fill { height: 100%; width: 0%; background: var(--primary); transition: 0.5s; }
+        .option-btn:hover { background: #f8f8f8; border-color: var(--spain-red); }
+        
+        #progress-bar { position: fixed; bottom: 0; left: 0; height: 10px; background: var(--spain-gold); width: 0%; transition: 0.5s; }
     </style>
 </head>
 <body>
 
-<div id="game-viewport">
-    <div id="map-overlay">
-        <h1 style="color: white;">Tu viaje por España</h1>
-        <div id="next-location-btn" class="location-marker">Ir a la siguiente misión</div>
+<div id="map-screen">
+    <h1 style="text-shadow: 2px 2px 10px black;">¡Misión Completada!</h1>
+    <p style="font-size: 1.2em; text-shadow: 2px 2px 5px black;">Te mueves por el mapa de España...</p>
+    <div style="margin: 40px 0;">
+        <span style="font-size: 80px;">📍</span>
     </div>
+    <button class="btn-next-mission" onclick="startNextLocation()">IR A LA SIGUIENTE PARADA</button>
+</div>
 
-    <div class="quest-card" id="quest-box">
-        <h2 id="loc-name" style="margin-top:0; color: var(--secondary);">Cargando...</h2>
-        <p id="task-text"></p>
-        <img id="task-visual" class="task-image" style="display:none;">
-        <div id="answers-grid"></div>
-        <div id="feedback" style="margin-top: 15px; font-weight: bold;"></div>
+<div id="game-screen">
+    <div class="quest-card">
+        <h2 id="loc-title" style="color: var(--spain-red);"></h2>
+        <p id="question-text" style="font-size: 18px;"></p>
+        <div id="options-box"></div>
+        <p id="feedback" style="margin-top: 20px; font-weight: bold;"></p>
     </div>
-
-    <div class="progress-container">
-        <div id="progress-fill"></div>
-    </div>
+    <div id="progress-bar"></div>
 </div>
 
 <script>
-// --- КОНФИГУРАЦИЯ (Редактор будет менять этот объект) ---
-const gameData = {
-    locations: [
-        {
-            id: 1,
-            name: "Supermercado Mercadona",
-            bg: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1200",
-            tasks: [
-                {
-                    type: "quiz",
-                    question: "¿Cómo pides una bolsa?",
-                    options: ["¿Me das una bolsa?", "¿Tienes un zapato?", "¿Cuánto es?"],
-                    correct: 0,
-                    img: "https://images.unsplash.com/photo-1605600611280-1aef21275958?q=80&w=400"
-                }
-            ]
-        },
-        {
-            id: 2,
-            name: "Farmacia local",
-            bg: "https://images.unsplash.com/photo-1587854692152-cbe660dbbb88?q=80&w=1200",
-            tasks: [
-                {
-                    type: "input",
-                    question: "Escribe 'Мне нужна помощь' (исп.):",
-                    correct: "necesito ayuda",
-                    img: "https://images.unsplash.com/photo-1586015555751-63bb77f4322a?q=80&w=400"
-                }
-            ]
-        }
-    ]
-};
+const gameData = [
+    {
+        name: "Supermercado (Madrid)",
+        background: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=1200", // Фото полок магазина
+        questions: [
+            { q: "¿Cómo pides la cuenta?", options: ["La cuenta, por favor", "Hola, ¿qué tal?", "Soy un tomate"], correct: 0 }
+        ]
+    },
+    {
+        name: "Farmacia (Barcelona)",
+        background: "https://images.unsplash.com/photo-1631549916768-4119b295f78b?q=80&w=1200", // Фото аптеки
+        questions: [
+            { q: "Tienes tos. ¿Qué pides?", options: ["Jarabe para la tos", "Un kilo de manzanas", "Una entrada de cine"], correct: 0 }
+        ]
+    },
+    {
+        name: "Ayuntamiento (Valencia)",
+        background: "https://images.unsplash.com/photo-1512411925324-406b29d4990d?q=80&w=1200", // Фото мэрии/офиса
+        questions: [
+            { q: "¿Dónde está el padrón?", options: ["En la oficina", "En el parque", "En el café"], correct: 0 }
+        ]
+    }
+];
 
-// --- ДВИЖОК ИГРЫ ---
 let currentLocIdx = 0;
-let currentTaskIdx = 0;
 
-function init() {
-    showLocation();
-}
-
-function showLocation() {
-    const loc = gameData.locations[currentLocIdx];
-    const task = loc.tasks[currentTaskIdx];
+function loadLocation() {
+    // Скрываем карту
+    document.getElementById('map-screen').style.display = 'none';
     
-    document.getElementById('map-overlay').style.display = 'none';
-    document.getElementById('game-viewport').style.backgroundImage = `url(${loc.bg})`;
-    document.getElementById('loc-name').innerText = loc.name;
-    document.getElementById('task-text').innerText = task.question;
+    const loc = gameData[currentLocIdx];
     
-    const imgEl = document.getElementById('task-visual');
-    if(task.img) { imgEl.src = task.img; imgEl.style.display = 'block'; }
-    else { imgEl.style.display = 'none'; }
+    // 1. МЕНЯЕМ ФОН (Background-image)
+    document.getElementById('game-screen').style.backgroundImage = `url('${loc.background}')`;
+    
+    // 2. ОБНОВЛЯЕМ ТЕКСТЫ
+    document.getElementById('loc-title').innerText = loc.name;
+    document.getElementById('question-text').innerText = loc.questions[0].q;
+    
+    // 3. ОБНОВЛЯЕМ КНОПКИ
+    const box = document.getElementById('options-box');
+    box.innerHTML = '';
+    loc.questions[0].options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(i === loc.questions[0].correct);
+        box.appendChild(btn);
+    });
 
-    renderAnswers(task);
+    document.getElementById('feedback').innerText = "";
     updateProgress();
 }
 
-function renderAnswers(task) {
-    const container = document.getElementById('answers-grid');
-    container.innerHTML = '';
-    document.getElementById('feedback').innerText = '';
-
-    if(task.type === 'quiz') {
-        task.options.forEach((opt, i) => {
-            const b = document.createElement('button');
-            b.className = 'btn';
-            b.innerText = opt;
-            b.onclick = () => check(i === task.correct);
-            container.appendChild(b);
-        });
-    } else if(task.type === 'input') {
-        const inp = document.createElement('input');
-        inp.type = 'text';
-        inp.placeholder = 'Escribe aquí...';
-        const b = document.createElement('button');
-        b.className = 'btn';
-        b.innerText = 'Enviar';
-        b.onclick = () => check(inp.value.toLowerCase().trim() === task.correct);
-        container.appendChild(inp);
-        container.appendChild(b);
-    }
-}
-
-function check(isCorrect) {
+function checkAnswer(isCorrect) {
     const fb = document.getElementById('feedback');
     if(isCorrect) {
-        fb.style.color = 'green';
-        fb.innerText = "¡Correcto! +10 puntos";
-        setTimeout(nextStep, 1500);
+        fb.innerHTML = "✅ ¡Excelente!<br>Te has ganado el respeto de los locales.";
+        fb.style.color = "green";
+        
+        // Через 1.5 секунды "выбрасываем" на карту
+        setTimeout(showMapTransition, 1500);
     } else {
-        fb.style.color = 'red';
-        fb.innerText = "Inténtalo de nuevo";
+        fb.innerText = "❌ Inténtalo de nuevo, ¡tú puedes!";
+        fb.style.color = "red";
     }
 }
 
-function nextStep() {
-    currentTaskIdx++;
-    const loc = gameData.locations[currentLocIdx];
-    
-    if(currentTaskIdx >= loc.tasks.length) {
-        // Локация пройдена -> на карту
-        currentLocIdx++;
-        currentTaskIdx = 0;
-        if(currentLocIdx < gameData.locations.length) {
-            showMap();
-        } else {
-            alert("🎉 ¡Felicidades! Has completado el viaje.");
-        }
+function showMapTransition() {
+    currentLocIdx++;
+    if(currentLocIdx < gameData.length) {
+        // ПОКАЗЫВАЕМ ЭКРАН КАРТЫ
+        document.getElementById('map-screen').style.display = 'flex';
     } else {
-        showLocation();
+        alert("🎉 ¡FELICIDADES! Tienes tu residencia en España.");
+        currentLocIdx = 0; // Начать заново
+        loadLocation();
     }
 }
 
-function showMap() {
-    document.getElementById('map-overlay').style.display = 'flex';
-    document.getElementById('next-location-btn').onclick = showLocation;
+function startNextLocation() {
+    loadLocation();
 }
 
 function updateProgress() {
-    const total = gameData.locations.length;
-    const current = currentLocIdx;
-    document.getElementById('progress-fill').style.width = (current / total * 100) + '%';
+    const percent = (currentLocIdx / gameData.length) * 100;
+    document.getElementById('progress-bar').style.width = percent + '%';
 }
 
-init();
+// Запуск первой локации
+loadLocation();
 </script>
 </body>
 </html>
