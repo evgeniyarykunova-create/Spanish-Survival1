@@ -12,7 +12,7 @@
         #welcome-screen {
             position: fixed; inset: 0; 
             background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
-            url('https://images.unsplash.com/photo-1503917988258-f19af5a9bb60?q=80&w=1400') center/cover;
+            url('https://files.catbox.moe/rseive.png') center/cover;
             z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center;
         }
 
@@ -87,12 +87,12 @@
 
 <script>
 const config = {
-    map: { bg: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?q=80&w=1400" }, // Вид на Мадрид
-    character: "https://cdn-icons-png.flaticon.com/512/4140/4140047.png", // Персонаж (гид)
+    map: { bg: "https://files.catbox.moe/yc67of.png" }, 
+    character: "https://files.catbox.moe/cao772.png", 
     locations: [
         {
-            name: "Supermercado", icon: "https://cdn-icons-png.flaticon.com/512/3081/3081840.png",
-            x: 25, y: 40, bg: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1200",
+            name: "Supermercado", icon: "https://files.catbox.moe/xi6rhi.png",
+            x: 25, y: 40, bg: "https://files.catbox.moe/mr4fjx.png",
             successMsg: "¡Excelente! Has comprado todo lo necesario.",
             tasks: [
                 { title: "Sección de Fruta", q: "¿Cómo pides medio kilo de naranjas?", type: "quiz", options: ["Medio kilo, por favor", "Quiero un café", "Dos kilos de carne"], correct: 0, win: "¡Bien dicho! 🍊" },
@@ -101,8 +101,8 @@ const config = {
             done: false
         },
         {
-            name: "Farmacia", icon: "https://cdn-icons-png.flaticon.com/512/4320/4320350.png",
-            x: 50, y: 70, bg: "https://images.unsplash.com/photo-1587854692152-cbe660dbbb88?q=80&w=1200",
+            name: "Farmacia", icon: "https://files.catbox.moe/rfd6lh.png",
+            x: 50, y: 70, bg: "https://files.catbox.moe/ei5qyi.png",
             successMsg: "¡Muy bien! Ahora tienes tu medicina.",
             tasks: [
                 { title: "Síntomas", q: "Tienes dolor de cabeza. ¿Qué dices?", type: "quiz", options: ["Tengo dolor de cabeza", "Tengo hambre", "Quiero un zapato"], correct: 0, win: "El farmacéutico te entiende. ✅" },
@@ -111,8 +111,8 @@ const config = {
             done: false
         },
         {
-            name: "Tienda de Ropa", icon: "https://cdn-icons-png.flaticon.com/512/3050/3050215.png",
-            x: 75, y: 35, bg: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1200",
+            name: "Tienda de Ropa", icon: "https://files.catbox.moe/18l090.png",
+            x: 75, y: 35, bg: "https://files.catbox.moe/l7q1nj.png",
             successMsg: "¡Guau! Te queda muy bien esa ropa nueva.",
             tasks: [
                 { title: "Probarse ropa", q: "¿Dónde te puedes probar la ropa?", type: "quiz", options: ["En el probador", "En la caja", "En la calle"], correct: 0, win: "¡Correcto! Vas al probador. 👗" },
